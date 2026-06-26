@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Jana's Cadence Trainer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --black: #0d0d0f; --track-red: #c0392b; --track-red-dim: #7a2420;
+    --gold: #e8b84b; --gold-dim: #8a6d28; --white: #f5f2ec;
+    --gray: #888; --panel: #161618; --panel2: #1e1e22;
+  }
+  body {
+    background: var(--black); color: var(--white);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100dvh; display: flex; flex-direction: column;
+    align-items: center; padding: 0 0 48px; overflow-x: hidden;
+  }
+  .header {
+    width: 100%; background: var(--panel); border-bottom: 3px solid var(--track-red);
+    padding: 22px 24px 18px; position: relative; overflow: hidden;
+  }
+  .header::before {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 6px;
+    background: repeating-linear-gradient(90deg, var(--track-red) 0px, var(--track-red) 20px, transparent 20px, transparent 28px);
+    opacity: .45;
+  }
+  .header-top { display: flex; align-items: baseline; gap: 10px; }
+  .header-top h1 { font-size: 22px; font-weight: 700; letter-spacing: -.3px; }
+  .event-badge {
+    font-family: 'Space Mono', monospace; font-size: 11px; color: var(--track-red);
+    background: rgba(192,57,43,.15); border: 1px solid var(--track-red-dim);
+    padding: 2px 8px; border-radius: 3px; letter-spacing: 1px;
+  }
+  .header-sub { font-size: 12px; color: var(--gray); margin-top: 4px; }
+  .card {
+    margin: 20px 20px 0; background: var(--panel); border: 1px solid #2a2a2e;
+    border-radius: 14px; padding: 18px 20px;
+    width: calc(100% - 40px); max-width: 420px;
+  }
+  .card2 { background: var(--panel2); }
+  .lbl { font-size: 11px; color: var(--gray); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 12px; }
+  .time-display { font-family: 'Space Mono', monospace; font-size: 52px; font-weight: 700; color: var(--gold); letter-spacing: -1px; line-height: 1; }
+  .time-display .dec { font-size: 38px; color: var(--gold-dim); }
+  .time-subline { margin-top: 8px; font-size: 12px; color: var(--gray); }
+  .time-subline b { color: var(--white); }
+  .bpm-row { display: flex; align-items: center; justify-content: space-between; }
+  .bpm-val { font-family: 'Space Mono', monospace; font-size: 54px; font-weight: 700; line-height: 1; }
+  .bpm-unit { font-size: 13px; color: var(--gray); margin-top: 6px; }
+  .bpm-stepper { display: flex; flex-direction: column; gap: 10px; }
+  .step-btn {
+    background: #2a2a2e; border: 1px solid #3a3a40; color: var(--white);
+    font-size: 22px; font-weight: 700; width: 52px; height: 52px; border-radius: 10px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background .1s, transform .1s;
+    -webkit-tap-highlight-color: transparent; touch-action: manipulation; user-select: none;
+  }
+  .step-btn:active { background: #3a3a40; transform: scale(.94); }
+  .step-btn.up { color: var(--gold); } .step-btn.down { color: var(--track-red); }
+  .bpm-bar-wrap { margin-top: 14px; height: 6px; background: #2a2a2e; border-radius: 3px; overflow: hidden; }
+  .bpm-bar { height: 100%; background: linear-gradient(90deg, var(--track-red), var(--gold)); border-radius: 3px; transition: width .3s ease; }
+  .bpm-range-labels { display: flex; justify-content: space-between; margin-top: 5px; font-size: 10px; color: #555; font-family: 'Space Mono', monospace; }
+  .style-row { display: flex; gap: 8px; }
+  .style-btn {
+    flex: 1; padding: 10px 6px; border-radius: 10px; border: 1px solid #3a3a40;
+    background: #2a2a2e; color: var(--gray); font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; text-align: center;
+    -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  }
+  .style-btn.active { border-color: var(--gold); color: var(--gold); background: rgba(232,184,75,.12); }
+  .style-btn .style-icon { font-size: 20px; display: block; margin-bottom: 4px; }
+  .viz-wrap { display: flex; gap: 6px; align-items: flex-end; justify-content: center; height: 48px; margin-top: 14px; }
+  .viz-bar { flex: 1; max-width: 28px; border-radius: 4px 4px 0 0; background: #2a2a2e; transition: height .05s, background .05s; min-height: 4px; height: 4px; }
+  .viz-bar.k { background: var(--track-red); } .viz-bar.s { background: var(--gold); } .viz-bar.h { background: #7ab8f5; }
+  .play-wrap { margin: 20px 20px 0; width: calc(100% - 40px); max-width: 420px; }
+  .play-btn {
+    width: 100%; height: 76px; border-radius: 14px; border: none;
+    font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700;
+    cursor: pointer; transition: transform .1s, background .15s;
+    -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+  }
+  .play-btn.stopped { background: var(--track-red); color: var(--white); box-shadow: 0 4px 24px rgba(192,57,43,.4); }
+  .play-btn.playing { background: #2a2a2e; color: var(--white); border: 2px solid #3a3a40; }
+  .play-btn:active { transform: scale(.97); }
+  .section-label { font-size: 11px; color: var(--gray); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
+  .clear-btn { font-size: 10px; color: var(--track-red); background: none; border: none; cursor: pointer; font-family: inherit; letter-spacing: 1px; padding: 0; }
+  .sessions-list { display: flex; flex-direction: column; gap: 8px; }
+  .session-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--panel2); border-radius: 8px; }
+  .session-num { font-family: 'Space Mono', monospace; color: var(--gray); font-size: 11px; min-width: 28px; }
+  .session-bpm { font-family: 'Space Mono', monospace; font-weight: 700; font-size: 16px; }
+  .session-time-str { color: var(--gold); font-family: 'Space Mono', monospace; font-size: 13px; }
+  .session-date { color: #555; font-size: 11px; }
+  .no-sessions { color: #555; font-size: 13px; text-align: center; padding: 12px 0; }
+  .save-wrap { margin: 14px 20px 0; width: calc(100% - 40px); max-width: 420px; }
+  .save-btn {
+    width: 100%; height: 50px; border-radius: 10px; border: 1px solid #3a3a40;
+    background: #1e1e22; color: var(--white); font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px; font-weight: 600; cursor: pointer; transition: background .12s, transform .1s;
+    -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  }
+  .save-btn:active { background: #2a2a2e; transform: scale(.97); }
+  .info-card {
+    margin: 16px 20px 0; background: rgba(232,184,75,.07); border: 1px solid rgba(232,184,75,.2);
+    border-radius: 12px; padding: 14px 18px; width: calc(100% - 40px); max-width: 420px;
+    font-size: 12px; color: #aaa; line-height: 1.6;
+  }
+  .info-card b { color: var(--gold); }
+  #loadingMsg { color: var(--gray); font-size: 13px; text-align: center; margin-top: 8px; min-height: 18px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <h1>Jana's Cadence Trainer</h1>
+    <span class="event-badge">400H</span>
+  </div>
+  <div class="header-sub">Waukee · Girls Championship 400m Hurdles</div>
+</div>
+
+<div class="card">
+  <div class="lbl">Projected Race Time</div>
+  <div class="time-display" id="timeDisplay">1:01<span class="dec">.20</span></div>
+  <div class="time-subline">Cadence: <b id="cadenceSteps">~182 steps/min</b> · <b>~184 steps</b> total</div>
+</div>
+
+<div class="card card2">
+  <div class="bpm-row">
+    <div>
+      <div class="bpm-val" id="bpmVal">182</div>
+      <div class="bpm-unit">beats per minute</div>
+    </div>
+    <div class="bpm-stepper">
+      <button class="step-btn up" onclick="changeBPM(1)">＋</button>
+      <button class="step-btn down" onclick="changeBPM(-1)">－</button>
+    </div>
+  </div>
+  <div class="bpm-bar-wrap"><div class="bpm-bar" id="bpmBar" style="width:37%"></div></div>
+  <div class="bpm-range-labels"><span>160</span><span>220</span></div>
+</div>
+
+<div class="card">
+  <div class="lbl">Sound Style</div>
+  <div class="style-row">
+    <button class="style-btn active" data-style="drumkit" onclick="setStyle('drumkit',this)">
+      <span class="style-icon">🥁</span>Drum Kit
+    </button>
+    <button class="style-btn" data-style="perc" onclick="setStyle('perc',this)">
+      <span class="style-icon">🪘</span>Hand Drum
+    </button>
+    <button class="style-btn" data-style="conga" onclick="setStyle('conga',this)">
+      <span class="style-icon">🎵</span>Conga & Rim
+    </button>
+  </div>
+  <div class="viz-wrap" id="vizWrap">
+    <div class="viz-bar" id="v0"></div><div class="viz-bar" id="v1"></div>
+    <div class="viz-bar" id="v2"></div><div class="viz-bar" id="v3"></div>
+    <div class="viz-bar" id="v4"></div><div class="viz-bar" id="v5"></div>
+    <div class="viz-bar" id="v6"></div><div class="viz-bar" id="v7"></div>
+  </div>
+  <div id="loadingMsg"></div>
+</div>
+
+<div class="play-wrap">
+  <button class="play-btn stopped" id="playBtn" onclick="togglePlay()">
+    <span id="playIcon">▶</span><span id="playLabel">Start Cadence</span>
+  </button>
+</div>
+
+<div class="save-wrap">
+  <button class="save-btn" onclick="saveSession()">💾 Save This Session</button>
+</div>
+
+<div class="card" style="margin-top:24px">
+  <div class="section-label">
+    Session History
+    <button class="clear-btn" onclick="clearSessions()">CLEAR ALL</button>
+  </div>
+  <div class="sessions-list" id="sessionsList"><div class="no-sessions">No sessions saved yet</div></div>
+</div>
+
+<div class="info-card">
+  <b>How it works:</b> Each beat = one foot strike. Pick a feel, hit play, and run to the groove. Tap ＋ when the tempo feels comfortable — each BPM up shortens your finish time. Save sessions to track your progress.
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────
+// Utility
+// ─────────────────────────────────────────────────────────
+let audioCtx = null;
+function ctx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+// White noise buffer (reused)
+let _noiseBuf = null;
+function noiseBuf() {
+  if (_noiseBuf) return _noiseBuf;
+  const c = ctx();
+  const len = c.sampleRate * 2;
+  _noiseBuf = c.createBuffer(1, len, c.sampleRate);
+  const d = _noiseBuf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  return _noiseBuf;
+}
+
+function noiseSource() {
+  const src = ctx().createBufferSource();
+  src.buffer = noiseBuf();
+  src.loop = true;
+  return src;
+}
+
+// Reverb impulse (short room — makes drums feel real)
+let _reverb = null;
+async function getReverb() {
+  if (_reverb) return _reverb;
+  const c = ctx();
+  const len = c.sampleRate * 0.6;
+  const buf = c.createBuffer(2, len, c.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = buf.getChannelData(ch);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.5);
+  }
+  _reverb = c.createConvolver();
+  _reverb.buffer = buf;
+  _reverb.connect(c.destination);
+  return _reverb;
+}
+
+function mkGain(val, dest) {
+  const g = ctx().createGain();
+  g.gain.value = val;
+  g.connect(dest);
+  return g;
+}
+
+// ─────────────────────────────────────────────────────────
+// DRUM KIT — acoustic feel
+// ─────────────────────────────────────────────────────────
+
+// Kick: layered transient + body + low thump
+function drumKick(t, verb) {
+  const c = ctx();
+
+  // Body — pitched sweep
+  const osc = c.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(120, t);
+  osc.frequency.exponentialRampToValueAtTime(42, t + 0.07);
+  osc.frequency.exponentialRampToValueAtTime(38, t + 0.25);
+  const bodyGain = c.createGain();
+  bodyGain.gain.setValueAtTime(0.85, t);
+  bodyGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.38);
+  osc.connect(bodyGain); bodyGain.connect(c.destination);
+  osc.start(t); osc.stop(t + 0.4);
+
+  // Click transient — noise burst through highpass
+  const ns = noiseSource();
+  const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1800;
+  const clickGain = c.createGain();
+  clickGain.gain.setValueAtTime(0.35, t);
+  clickGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.02);
+  ns.connect(hp); hp.connect(clickGain); clickGain.connect(c.destination);
+  ns.start(t); ns.stop(t + 0.025);
+
+  // Sub thump — very low sine
+  const sub = c.createOscillator(); sub.type = 'sine'; sub.frequency.value = 52;
+  const subG = c.createGain();
+  subG.gain.setValueAtTime(0.5, t); subG.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+  sub.connect(subG); subG.connect(c.destination);
+  sub.start(t); sub.stop(t + 0.25);
+}
+
+// Snare: noise + pitched crack + light reverb
+function drumSnare(t, verb) {
+  const c = ctx();
+  const rv = mkGain(0.18, verb);
+
+  // Noise body
+  const ns = noiseSource();
+  const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2800; bp.Q.value = 0.6;
+  const noiseG = c.createGain();
+  noiseG.gain.setValueAtTime(0, t);
+  noiseG.gain.linearRampToValueAtTime(0.7, t + 0.003);
+  noiseG.gain.exponentialRampToValueAtTime(0.0001, t + 0.19);
+  ns.connect(bp); bp.connect(noiseG);
+  noiseG.connect(c.destination); noiseG.connect(rv);
+  ns.start(t); ns.stop(t + 0.22);
+
+  // Snappy pitched tone (the "crack")
+  const osc = c.createOscillator(); osc.type = 'triangle';
+  osc.frequency.setValueAtTime(280, t);
+  osc.frequency.exponentialRampToValueAtTime(160, t + 0.06);
+  const toneG = c.createGain();
+  toneG.gain.setValueAtTime(0.45, t);
+  toneG.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
+  osc.connect(toneG); toneG.connect(c.destination); toneG.connect(rv);
+  osc.start(t); osc.stop(t + 0.1);
+
+  // Wire rattle — high noise burst
+  const ns2 = noiseSource();
+  const hp2 = c.createBiquadFilter(); hp2.type = 'highpass'; hp2.frequency.value = 6000;
+  const rattleG = c.createGain();
+  rattleG.gain.setValueAtTime(0.22, t + 0.005);
+  rattleG.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
+  ns2.connect(hp2); hp2.connect(rattleG); rattleG.connect(c.destination);
+  ns2.start(t + 0.005); ns2.stop(t + 0.16);
+}
+
+// Hi-hat: metallic noise through resonant highpass
+function drumHat(t, open, verb) {
+  const c = ctx();
+  const dur = open ? 0.32 : 0.055;
+
+  // Layer 2 detuned noise bursts for metallic shimmer
+  [7200, 9500, 11200].forEach((freq, i) => {
+    const ns = noiseSource();
+    const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = freq; bp.Q.value = 1.2 + i * 0.3;
+    const g = c.createGain();
+    const vol = open ? [0.14, 0.09, 0.06][i] : [0.11, 0.07, 0.04][i];
+    g.gain.setValueAtTime(vol, t + i * 0.001);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    ns.connect(bp); bp.connect(g); g.connect(c.destination);
+    if (open) g.connect(mkGain(0.08, verb));
+    ns.start(t + i * 0.001); ns.stop(t + dur + 0.01);
+  });
+}
+
+// ─────────────────────────────────────────────────────────
+// HAND DRUM (djembe-style) + shaker
+// ─────────────────────────────────────────────────────────
+
+function djembeBass(t, verb) {
+  const c = ctx();
+  const rv = mkGain(0.25, verb);
+
+  // Deep membrane thud
+  const osc = c.createOscillator(); osc.type = 'sine';
+  osc.frequency.setValueAtTime(200, t);
+  osc.frequency.exponentialRampToValueAtTime(68, t + 0.06);
+  osc.frequency.exponentialRampToValueAtTime(55, t + 0.22);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.75, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.32);
+  osc.connect(g); g.connect(c.destination); g.connect(rv);
+  osc.start(t); osc.stop(t + 0.35);
+
+  // Slap transient
+  const ns = noiseSource();
+  const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 600;
+  const ng = c.createGain();
+  ng.gain.setValueAtTime(0.3, t); ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+  ns.connect(lp); lp.connect(ng); ng.connect(c.destination);
+  ns.start(t); ns.stop(t + 0.04);
+}
+
+function djembeTone(t, verb) {
+  const c = ctx();
+  const rv = mkGain(0.3, verb);
+
+  const osc = c.createOscillator(); osc.type = 'sine';
+  osc.frequency.setValueAtTime(380, t);
+  osc.frequency.exponentialRampToValueAtTime(310, t + 0.05);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.55, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.26);
+  osc.connect(g); g.connect(c.destination); g.connect(rv);
+  osc.start(t); osc.stop(t + 0.28);
+
+  // Higher overtone
+  const osc2 = c.createOscillator(); osc2.type = 'sine'; osc2.frequency.value = 620;
+  const g2 = c.createGain();
+  g2.gain.setValueAtTime(0.18, t); g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
+  osc2.connect(g2); g2.connect(c.destination);
+  osc2.start(t); osc2.stop(t + 0.12);
+}
+
+function shaker(t, accent) {
+  const c = ctx();
+  const ns = noiseSource();
+  const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 5500;
+  const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 8000; bp.Q.value = 0.8;
+  const g = c.createGain();
+  const vol = accent ? 0.18 : 0.09;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+  ns.connect(hp); hp.connect(bp); bp.connect(g); g.connect(c.destination);
+  ns.start(t); ns.stop(t + 0.07);
+}
+
+// ─────────────────────────────────────────────────────────
+// CONGA & RIM SHOT
+// ─────────────────────────────────────────────────────────
+
+function conga(t, high, verb) {
+  const c = ctx();
+  const rv = mkGain(0.2, verb);
+  const baseFreq = high ? 340 : 220;
+
+  const osc = c.createOscillator(); osc.type = 'sine';
+  osc.frequency.setValueAtTime(baseFreq * 1.6, t);
+  osc.frequency.exponentialRampToValueAtTime(baseFreq, t + 0.04);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.65, t); g.gain.exponentialRampToValueAtTime(0.0001, t + (high ? 0.22 : 0.3));
+  osc.connect(g); g.connect(c.destination); g.connect(rv);
+  osc.start(t); osc.stop(t + (high ? 0.25 : 0.33));
+
+  // Slap
+  const ns = noiseSource();
+  const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = high ? 3500 : 1800; bp.Q.value = 1.5;
+  const ng = c.createGain();
+  ng.gain.setValueAtTime(0.28, t); ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.025);
+  ns.connect(bp); bp.connect(ng); ng.connect(c.destination);
+  ns.start(t); ns.stop(t + 0.03);
+}
+
+function rimshot(t, verb) {
+  const c = ctx();
+  const rv = mkGain(0.15, verb);
+
+  // Woodblock-ish — sharp pitched click
+  const osc = c.createOscillator(); osc.type = 'square';
+  osc.frequency.setValueAtTime(1100, t);
+  osc.frequency.exponentialRampToValueAtTime(600, t + 0.025);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.4, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+  osc.connect(g); g.connect(c.destination); g.connect(rv);
+  osc.start(t); osc.stop(t + 0.055);
+
+  // Noise snap
+  const ns = noiseSource();
+  const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 3500;
+  const ng = c.createGain();
+  ng.gain.setValueAtTime(0.3, t); ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
+  ns.connect(hp); hp.connect(ng); ng.connect(c.destination); ng.connect(rv);
+  ns.start(t); ns.stop(t + 0.05);
+}
+
+function cabasa(t, accent) {
+  const c = ctx();
+  const ns = noiseSource();
+  const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 4000;
+  const g = c.createGain();
+  g.gain.setValueAtTime(accent ? 0.13 : 0.07, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + (accent ? 0.09 : 0.05));
+  ns.connect(hp); hp.connect(g); g.connect(c.destination);
+  ns.start(t); ns.stop(t + 0.1);
+}
+
+// ─────────────────────────────────────────────────────────
+// Beat patterns
+// ─────────────────────────────────────────────────────────
+// 8 steps = 2 bars of 4/4 at half-time feel
+// Each step = one 8th note; beats land on 0,2,4,6
+
+function scheduleStep(t, step, style, verb) {
+  if (style === 'drumkit') {
+    // Kick: 1 (downbeat), 5 (3rd beat), ghost on 3
+    if (step === 0 || step === 4) drumKick(t, verb);
+    if (step === 3) { // ghost kick, softer — model it with a lighter version
+      const c = ctx();
+      const osc = c.createOscillator(); osc.type = 'sine';
+      osc.frequency.setValueAtTime(90, t); osc.frequency.exponentialRampToValueAtTime(44, t + 0.08);
+      const g = c.createGain(); g.gain.setValueAtTime(0.25, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+      osc.connect(g); g.connect(c.destination); osc.start(t); osc.stop(t + 0.2);
+    }
+    // Snare: 2 and 6 (backbeat)
+    if (step === 2 || step === 6) drumSnare(t, verb);
+    // Hats: every step; open on beat 4 (step 6)
+    drumHat(t, step === 6, verb);
+
+  } else if (style === 'perc') {
+    // Djembe bass on 0 and 4
+    if (step === 0 || step === 4) djembeBass(t, verb);
+    // Tone on 2 and 6
+    if (step === 2 || step === 6) djembeTone(t, verb);
+    // Extra tone ghost on 7
+    if (step === 7) {
+      const c = ctx();
+      const osc = c.createOscillator(); osc.type = 'sine'; osc.frequency.value = 290;
+      const g = c.createGain(); g.gain.setValueAtTime(0.18, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
+      osc.connect(g); g.connect(c.destination); osc.start(t); osc.stop(t + 0.16);
+    }
+    // Shaker on every step, accented on beat starts
+    shaker(t, step % 2 === 0);
+
+  } else { // conga
+    // Low conga on 0, 4
+    if (step === 0 || step === 4) conga(t, false, verb);
+    // High conga on 2, 5
+    if (step === 2 || step === 5) conga(t, true, verb);
+    // Extra high on 7 (pickup feel)
+    if (step === 7) conga(t + 0.01, true, verb);
+    // Rimshot on 2 and 6 (backbeat accent)
+    if (step === 2 || step === 6) setTimeout(() => {}, 0) || rimshot(t + 0.008, verb);
+    // Cabasa (metallic scraper) — subdivisions
+    cabasa(t, step % 2 === 0);
+  }
+
+  // Visual
+  const delay = Math.max(0, (t - ctx().currentTime) * 1000);
+  setTimeout(() => flashViz(step, style), delay);
+}
+
+// ─────────────────────────────────────────────────────────
+// Scheduler
+// ─────────────────────────────────────────────────────────
+let bpm = 182, isPlaying = false, nextBeatTime = 0, beatIndex = 0;
+let schedInterval = null, soundStyle = 'drumkit', verbNode = null;
+const BPM_MIN = 160, BPM_MAX = 220, TOTAL_STEPS = 184;
+
+async function ensureReverb() {
+  if (!verbNode) verbNode = await getReverb();
+  return verbNode;
+}
+
+function scheduler() {
+  const stepInterval = (60 / bpm) / 2; // 8th note at this foot-strike BPM
+  const c = ctx();
+  const lookahead = 0.14;
+  while (nextBeatTime < c.currentTime + lookahead) {
+    scheduleStep(nextBeatTime, beatIndex, soundStyle, verbNode);
+    beatIndex = (beatIndex + 1) % 8;
+    nextBeatTime += stepInterval;
+  }
+}
+
+async function startGroove() {
+  const c = ctx();
+  if (c.state === 'suspended') await c.resume();
+  await ensureReverb();
+  noiseBuf(); // pre-warm
+  beatIndex = 0;
+  nextBeatTime = c.currentTime + 0.08;
+  schedInterval = setInterval(scheduler, 20);
+}
+
+function stopGroove() {
+  clearInterval(schedInterval); schedInterval = null;
+}
+
+// ─────────────────────────────────────────────────────────
+// Visualizer
+// ─────────────────────────────────────────────────────────
+const vizBars = [0,1,2,3,4,5,6,7].map(i => document.getElementById('v'+i));
+const vizTO = [];
+
+function flashViz(step, style) {
+  let cls = 'h', h = '28%';
+  if (style === 'drumkit') {
+    if (step === 0 || step === 4) { cls = 'k'; h = '100%'; }
+    else if (step === 2 || step === 6) { cls = 's'; h = '72%'; }
+    else if (step === 3) { cls = 'k'; h = '40%'; }
+  } else if (style === 'perc') {
+    if (step === 0 || step === 4) { cls = 'k'; h = '100%'; }
+    else if (step === 2 || step === 6) { cls = 's'; h = '70%'; }
+    else if (step === 7) { cls = 's'; h = '35%'; }
+  } else {
+    if (step === 0 || step === 4) { cls = 'k'; h = '100%'; }
+    else if (step === 2 || step === 5 || step === 6 || step === 7) { cls = 's'; h = step===2||step===6 ? '75%' : '45%'; }
+  }
+  const bar = vizBars[step];
+  bar.style.height = h; bar.className = 'viz-bar ' + cls;
+  clearTimeout(vizTO[step]);
+  vizTO[step] = setTimeout(() => { bar.style.height = '4px'; bar.className = 'viz-bar'; }, 130);
+}
+
+// ─────────────────────────────────────────────────────────
+// Controls
+// ─────────────────────────────────────────────────────────
+function changeBPM(d) {
+  bpm = Math.min(BPM_MAX, Math.max(BPM_MIN, bpm + d));
+  updateBPMDisplay();
+}
+
+function setStyle(s, btn) {
+  soundStyle = s;
+  document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+async function togglePlay() {
+  isPlaying = !isPlaying;
+  const btn = document.getElementById('playBtn');
+  if (isPlaying) {
+    document.getElementById('loadingMsg').textContent = 'Loading…';
+    await startGroove();
+    document.getElementById('loadingMsg').textContent = '';
+    btn.className = 'play-btn playing';
+    document.getElementById('playIcon').textContent = '⏹';
+    document.getElementById('playLabel').textContent = 'Stop';
+  } else {
+    stopGroove();
+    btn.className = 'play-btn stopped';
+    document.getElementById('playIcon').textContent = '▶';
+    document.getElementById('playLabel').textContent = 'Start Cadence';
+    vizBars.forEach(b => { b.style.height = '4px'; b.className = 'viz-bar'; });
+  }
+}
+
+function updateBPMDisplay() {
+  document.getElementById('bpmVal').textContent = bpm;
+  const pct = ((bpm - BPM_MIN) / (BPM_MAX - BPM_MIN)) * 100;
+  document.getElementById('bpmBar').style.width = pct + '%';
+  const totalSec = (TOTAL_STEPS / bpm) * 60;
+  const mins = Math.floor(totalSec / 60);
+  const secs = (totalSec % 60).toFixed(2).padStart(5, '0');
+  document.getElementById('timeDisplay').innerHTML =
+    `${mins}:${secs.split('.')[0]}<span class="dec">.${secs.split('.')[1]}</span>`;
+  document.getElementById('cadenceSteps').textContent = `~${bpm} steps/min`;
+}
+
+// ─────────────────────────────────────────────────────────
+// Sessions
+// ─────────────────────────────────────────────────────────
+function getSessions() { try { return JSON.parse(localStorage.getItem('jana_sessions2') || '[]'); } catch { return []; } }
+function saveSessions(a) { localStorage.setItem('jana_sessions2', JSON.stringify(a)); }
+
+function saveSession() {
+  const sessions = getSessions();
+  const totalSec = (TOTAL_STEPS / bpm) * 60;
+  const mins = Math.floor(totalSec / 60);
+  const secs = (totalSec % 60).toFixed(2).padStart(5, '0');
+  sessions.unshift({ bpm, timeStr: `${mins}:${secs}`, style: soundStyle, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }) });
+  saveSessions(sessions.slice(0, 20));
+  renderSessions();
+}
+
+function clearSessions() {
+  if (confirm('Clear all session history?')) { localStorage.removeItem('jana_sessions2'); renderSessions(); }
+}
+
+function renderSessions() {
+  const list = document.getElementById('sessionsList');
+  const sessions = getSessions();
+  if (!sessions.length) { list.innerHTML = '<div class="no-sessions">No sessions saved yet</div>'; return; }
+  list.innerHTML = sessions.map((s, i) => `
+    <div class="session-row">
+      <span class="session-num">#${sessions.length - i}</span>
+      <span class="session-bpm">${s.bpm} <small style="color:#555;font-size:10px">BPM</small></span>
+      <span class="session-time-str">${s.timeStr}</span>
+      <span class="session-date">${s.date}</span>
+    </div>`).join('');
+}
+
+updateBPMDisplay();
+renderSessions();
+</script>
+</body>
+</html>
